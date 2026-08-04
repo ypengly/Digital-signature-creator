@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Penned — Draw your digital signature</title>
+<meta name="description" content="Draw, customize, and download your handwritten digital signature in seconds." />
+
+<!-- ============================================================
+     FONTS
+     Fraunces  → display serif, carries the "document / signed"
+                 personality in headlines
+     Inter     → neutral workhorse for UI copy and controls
+     Caveat    → genuine handwriting face, used sparingly for the
+                 wordmark and the animated hero flourish only
+     ============================================================ -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* =================================================================
+   1. DESIGN TOKENS
+   ================================================================= */
+:root{
+  /* -- palette -------------------------------------------------- */
+  --paper:        #FAFAF9;   /* page background            */
+  --surface:      #FFFFFF;   /* raised cards                */
+  --surface-2:    #F4F3EF;   /* recessed / paper card       */
+  --ink:          #14213D;   /* primary text — deep navy    */
+  --ink-soft:     #3C4863;   /* secondary text              */
+  --mist:         #8B93A7;   /* tertiary text / placeholders*/
+  --border:       #E6E5E0;
+  --border-soft:  #EFEEE9;
+
+  --indigo:       #4F46E5;   /* primary accent / CTA        */
+  --indigo-600:   #4338CA;
+  --indigo-100:   #ECEBFC;
+  --gold:         #B8860B;   /* seal / premium accent       */
+  --gold-100:     #FBF3DF;
+
+  --glass-bg:     rgba(255,255,255,0.60);
+  --glass-brd:    rgba(255,255,255,0.70);
+  --shadow-sm:    0 1px 2px rgba(20,33,61,0.06);
+  --shadow-md:    0 8px 24px rgba(20,33,61,0.08);
+  --shadow-lg:    0 24px 60px rgba(20,33,61,0.14);
+
+  /* -- type ------------------------------------------------------*/
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --font-body:    'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-hand:    'Caveat', cursive;
+
+  /* -- misc ------------------------------------------------------*/
+  --radius-sm: 10px;
+  --radius-md: 18px;
+  --radius-lg: 28px;
+  --ease: cubic-bezier(.22,1,.36,1);
+}
+
+[data-theme="dark"]{
+  --paper:        #0E1120;
+  --surface:      #161A2C;
+  --surface-2:    #12152400;
+  --surface-2:    #171B2E;
+  --ink:          #F3F4F8;
+  --ink-soft:     #C3C8D9;
+  --mist:         #7B82A0;
+  --border:       rgba(255,255,255,0.09);
+  --border-soft:  rgba(255,255,255,0.06);
+
+  --indigo:       #8B87FF;
+  --indigo-600:   #A5A2FF;
+  --indigo-100:   #23234A;
+  --gold:         #E4C377;
+  --gold-100:     #2B2716;
+
+  --glass-bg:     rgba(255,255,255,0.06);
+  --glass-brd:    rgba(255,255,255,0.10);
+  --shadow-sm:    0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md:    0 8px 24px rgba(0,0,0,0.35);
+  --shadow-lg:    0 24px 60px rgba(0,0,0,0.5);
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior:auto !important; }
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  margin:0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  transition: background .4s var(--ease), color .4s var(--ease);
+  overflow-x:hidden;
+}
+
+/* ambient background wash — quiet, not a template gradient blob */
+body::before{
+  content:"";
+  position:fixed; inset:0; z-index:-1;
+  background:
+    radial-gradient(60vw 40vh at 85% -5%, rgba(79,70,229,0.08), transparent 60%),
+    radial-gradient(50vw 40vh at 5% 10%, rgba(184,134,11,0.05), transparent 60%);
+  pointer-events:none;
+}
+
+img,svg{ display:block; max-width:100%; }
+button{ font-family:inherit; }
+a{ color:inherit; }
+
+.wrap{ max-width:1180px; margin:0 auto; padding:0 28px; }
+@media (max-width:640px){ .wrap{ padding:0 18px; } }
+
+:focus-visible{ outline:2px solid var(--indigo); outline-offset:3px; border-radius:6px; }
+
+/* hand-drawn underline used as a structural device beneath
+   section titles / the wordmark — echoes the product's subject */
+.stroke-rule{ display:block; width:64px; height:10px; margin-top:4px; }
+.stroke-rule path{ stroke:var(--gold); stroke-width:3; fill:none; stroke-linecap:round; }
+
+/* =================================================================
+   2. HEADER
+   ================================================================= */
+header.site{
+  position:sticky; top:0; z-index:40;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  border-bottom:1px solid var(--border-soft);
+}
+.site-row{
+  display:flex; align-items:center; justify-content:space-between;
+  height:74px;
+}
+.brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--ink); }
+.brand-mark{ width:34px; height:34px; color:var(--indigo); flex:none; }
+.brand-word{ font-family:var(--font-hand); font-size:28px; font-weight:700; line-height:1; letter-spacing:.2px; }
+
+nav.site-nav{ display:flex; align-items:center; gap:28px; }
+nav.site-nav a.nav-link{
+  font-size:14.5px; color:var(--ink-soft); text-decoration:none; font-weight:500;
+}
+nav.site-nav a.nav-link:hover{ color:var(--ink); }
+
+.icon-btn{
+  width:40px; height:40px; border-radius:999px;
+  border:1px solid var(--border);
+  background:var(--surface);
+  display:grid; place-items:center;
+  cursor:pointer; color:var(--ink-soft);
+  transition: transform .25s var(--ease), border-color .25s, color .25s, background .25s;
+}
+.icon-btn:hover{ color:var(--indigo); border-color:var(--indigo); transform:translateY(-1px); }
+.icon-btn svg{ width:18px; height:18px; }
+
+.btn{
+  --btn-fg:#fff;
+  display:inline-flex; align-items:center; gap:8px;
+  padding:12px 22px; border-radius:999px; border:1px solid transparent;
+  font-weight:600; font-size:14.5px; cursor:pointer;
+  transition: transform .25s var(--ease), box-shadow .25s var(--ease), background .25s, border-color .25s, opacity .2s;
+  text-decoration:none; white-space:nowrap;
+}
+.btn:active{ transform:scale(.97); }
+.btn-primary{
+  background: linear-gradient(160deg, var(--indigo), var(--indigo-600));
+  color:var(--btn-fg);
+  box-shadow: 0 10px 24px -8px rgba(79,70,229,.55);
+}
+.btn-primary:hover{ transform:translateY(-2px); box-shadow:0 16px 30px -10px rgba(79,70,229,.6); }
+.btn-ghost{
+  background:transparent; border-color:var(--border); color:var(--ink);
+}
+.btn-ghost:hover{ border-color:var(--indigo); color:var(--indigo); }
+.btn-soft{
+  background:var(--indigo-100); color:var(--indigo); border-color:transparent;
+}
+.btn-soft:hover{ transform:translateY(-1px); }
+.btn-sm{ padding:9px 16px; font-size:13.5px; }
+.btn[disabled]{ opacity:.45; cursor:not-allowed; transform:none !important; box-shadow:none !important; }
+.btn svg{ width:16px; height:16px; }
+
+/* =================================================================
+   3. HERO
+   ================================================================= */
+.hero{ padding:92px 0 60px; text-align:center; position:relative; }
+.eyebrow{
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:13px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--indigo); background:var(--indigo-100);
+  padding:8px 16px; border-radius:999px; margin-bottom:26px;
+}
+.eyebrow::before{ content:""; width:6px; height:6px; border-radius:50%; background:var(--gold); }
+
+.hero h1{
+  font-family:var(--font-display); font-weight:500;
+  font-size: clamp(38px, 6vw, 74px);
+  line-height:1.05; letter-spacing:-.01em; margin:0 auto;
+  max-width:16ch; color:var(--ink);
+}
+.hero h1 em{ font-style:italic; color:var(--indigo); position:relative; }
+
+.hero-flourish{ width:min(420px,80vw); height:60px; margin:6px auto 0; }
+.hero-flourish path{
+  fill:none; stroke:var(--gold); stroke-width:3.4; stroke-linecap:round;
+  stroke-dasharray:900; stroke-dashoffset:900;
+  animation: draw-flourish 1.8s var(--ease) .3s forwards;
+}
+@keyframes draw-flourish{ to{ stroke-dashoffset:0; } }
+
+.hero p.lead{
+  font-size:18px; color:var(--ink-soft); max-width:46ch; margin:26px auto 0;
+  line-height:1.6;
+}
+.hero-cta{ margin-top:38px; display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+.hero-trust{ margin-top:20px; font-size:13px; color:var(--mist); }
+
+/* =================================================================
+   4. SECTION HEADINGS (shared)
+   ================================================================= */
+.section-head{ margin-bottom:38px; }
+.section-head .eyebrow{ margin-bottom:14px; }
+.section-head h2{
+  font-family:var(--font-display); font-weight:500; font-size:clamp(26px,3.4vw,38px);
+  margin:0; color:var(--ink);
+}
+.section-head p{ color:var(--ink-soft); margin:10px 0 0; max-width:56ch; font-size:15.5px; }
+
+section{ padding:64px 0; }
+
+/* =================================================================
+   5. STUDIO — canvas + control panel
+   ================================================================= */
+.studio-grid{
+  display:grid; grid-template-columns: 1.5fr 1fr; gap:26px; align-items:start;
+}
+@media (max-width:940px){ .studio-grid{ grid-template-columns:1fr; } }
+
+/* -- paper card housing the canvas ------------------------------ */
+.paper-card{
+  position:relative;
+  background:
+    linear-gradient(var(--surface),var(--surface)) padding-box;
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-md);
+  padding:20px 20px 26px;
+}
+.paper-card-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.paper-card-head .label{
+  font-size:13px; font-weight:600; color:var(--mist); text-transform:uppercase; letter-spacing:.06em;
+}
+.stamp-pill{
+  display:none; align-items:center; gap:6px; font-size:12px; font-weight:600;
+  color:var(--gold); background:var(--gold-100); padding:6px 12px; border-radius:999px;
+}
+.stamp-pill.active{ display:inline-flex; }
+
+.canvas-shell{
+  position:relative; width:100%; aspect-ratio:16/8; min-height:260px;
+  border-radius:var(--radius-md);
+  background:
+    repeating-linear-gradient(transparent, transparent 100%),
+    var(--surface-2);
+  overflow:hidden;
+  border:1px dashed var(--border);
+  touch-action:none;
+}
+#sigCanvas{ position:absolute; inset:0; width:100%; height:100%; cursor:crosshair; }
+
+.baseline{
+  position:absolute; left:8%; right:8%; bottom:22%;
+  height:0;
+  border-top:2px dashed color-mix(in srgb, var(--ink) 18%, transparent);
+  pointer-events:none;
+}
+.baseline::after{
+  content:"×"; position:absolute; left:-2px; top:-11px; font-size:15px; color:var(--mist);
+}
+.canvas-placeholder{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  pointer-events:none; transition:opacity .25s var(--ease);
+}
+.canvas-placeholder span{
+  font-family:var(--font-hand); font-size:32px; color:var(--mist); opacity:.55;
+}
+.canvas-placeholder.hidden{ opacity:0; }
+
+/* stamp-mode overlay (visual only — baked into export separately) */
+.stamp-overlay{
+  position:absolute; inset:10px; border:1.5px solid var(--gold); border-radius:14px;
+  pointer-events:none; opacity:0; transition:opacity .3s var(--ease);
+}
+.stamp-overlay.active{ opacity:.9; }
+.stamp-overlay .stamp-text{
+  position:absolute; bottom:8px; right:14px; font-size:11px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--gold); font-weight:600;
+}
+
+/* floating glass toolbar under canvas */
+.toolbar{
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  margin-top:16px; padding:10px; border-radius:999px;
+  background:var(--glass-bg); border:1px solid var(--glass-brd);
+  backdrop-filter:blur(16px) saturate(180%); -webkit-backdrop-filter:blur(16px) saturate(180%);
+  box-shadow:var(--shadow-sm);
+}
+.tool-btn{
+  width:42px; height:42px; border-radius:999px; border:none; background:transparent;
+  color:var(--ink-soft); display:grid; place-items:center; cursor:pointer;
+  transition:background .2s, color .2s, transform .2s;
+}
+.tool-btn:hover:not(:disabled){ background:var(--surface); color:var(--indigo); transform:translateY(-1px); }
+.tool-btn:disabled{ opacity:.35; cursor:not-allowed; }
+.tool-btn svg{ width:19px; height:19px; }
+.toolbar-sep{ width:1px; align-self:stretch; background:var(--border); margin:6px 2px; }
+.toolbar-spacer{ flex:1; }
+.hint{ font-size:12px; color:var(--mist); padding:0 10px; }
+@media (max-width:560px){ .hint{ display:none; } }
+
+/* -- control panel (glass) --------------------------------------- */
+.panel{
+  background:var(--glass-bg); border:1px solid var(--glass-brd);
+  backdrop-filter:blur(20px) saturate(180%); -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border-radius:var(--radius-lg); box-shadow:var(--shadow-md);
+  padding:26px; display:flex; flex-direction:column; gap:24px;
+}
+.panel-group{ display:flex; flex-direction:column; gap:12px; }
+.panel-group > .g-label{
+  font-size:12.5px; font-weight:600; color:var(--mist); text-transform:uppercase; letter-spacing:.06em;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.g-label .val{ color:var(--indigo); font-weight:700; text-transform:none; letter-spacing:0; }
+
+/* color swatches */
+.swatches{ display:flex; align-items:center; gap:10px; }
+.swatch{
+  width:34px; height:34px; border-radius:50%; border:2px solid transparent; cursor:pointer;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.08);
+  transition:transform .2s var(--ease), border-color .2s;
+  position:relative;
+}
+.swatch:hover{ transform:scale(1.08); }
+.swatch.active{ border-color:var(--indigo); }
+.swatch.active::after{
+  content:""; position:absolute; inset:-5px; border:1.5px solid var(--indigo); border-radius:50%;
+}
+.swatch-custom{
+  display:grid; place-items:center; background:conic-gradient(from 90deg,#ff5f6d,#ffc371,#4facfe,#43e97b,#fa709a,#ff5f6d);
+}
+.swatch-custom input[type="color"]{
+  width:0; height:0; opacity:0; position:absolute;
+}
+
+/* segmented control — pen style */
+.segmented{
+  display:grid; grid-template-columns:repeat(3,1fr); gap:6px;
+  background:var(--surface-2); padding:5px; border-radius:14px; border:1px solid var(--border-soft);
+}
+.segmented button{
+  border:none; background:transparent; padding:9px 6px; border-radius:10px; cursor:pointer;
+  font-size:13px; font-weight:600; color:var(--ink-soft); transition:.2s var(--ease);
+}
+.segmented button.active{ background:var(--surface); color:var(--indigo); box-shadow:var(--shadow-sm); }
+
+/* slider */
+input[type="range"]{
+  -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:999px;
+  background: linear-gradient(90deg, var(--indigo) var(--pct,40%), var(--border) var(--pct,40%));
+  outline:none; cursor:pointer;
+}
+input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:20px; height:20px; border-radius:50%;
+  background:var(--surface); border:3px solid var(--indigo); cursor:pointer;
+  box-shadow:var(--shadow-sm); transition:transform .15s var(--ease);
+}
+input[type="range"]::-webkit-slider-thumb:hover{ transform:scale(1.12); }
+input[type="range"]::-moz-range-thumb{
+  width:20px; height:20px; border-radius:50%; background:var(--surface); border:3px solid var(--indigo); cursor:pointer;
+}
+.scale-labels{ display:flex; justify-content:space-between; font-size:11.5px; color:var(--mist); margin-top:2px; }
+
+/* toggle switch */
+.toggle-row{ display:flex; align-items:center; justify-content:space-between; gap:14px; }
+.toggle-row .cap{ font-size:13.5px; color:var(--ink); font-weight:500; }
+.toggle-row .sub{ font-size:12px; color:var(--mist); margin-top:2px; }
+.switch{ position:relative; width:44px; height:26px; flex:none; }
+.switch input{ opacity:0; width:0; height:0; }
+.slider-pill{
+  position:absolute; inset:0; background:var(--border); border-radius:999px; cursor:pointer; transition:.25s var(--ease);
+}
+.slider-pill::before{
+  content:""; position:absolute; width:20px; height:20px; left:3px; top:3px; border-radius:50%;
+  background:var(--surface); box-shadow:var(--shadow-sm); transition:.25s var(--ease);
+}
+.switch input:checked + .slider-pill{ background:var(--indigo); }
+.switch input:checked + .slider-pill::before{ transform:translateX(18px); }
+
+.panel-divider{ height:1px; background:var(--border-soft); }
+
+/* export controls block */
+.export-row{ display:flex; gap:10px; }
+.export-row .btn{ flex:1; justify-content:center; }
+.select-wrap select{
+  width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--border);
+  background:var(--surface); color:var(--ink); font-size:13.5px; font-weight:500; cursor:pointer;
+}
+
+/* =================================================================
+   6. HISTORY GALLERY
+   ================================================================= */
+.history-grid{
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:16px;
+}
+.hist-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md);
+  overflow:hidden; box-shadow:var(--shadow-sm); transition:transform .25s var(--ease), box-shadow .25s var(--ease);
+}
+.hist-card:hover{ transform:translateY(-3px); box-shadow:var(--shadow-md); }
+.hist-thumb{
+  aspect-ratio:16/9;
+  background-image:
+    linear-gradient(45deg,#0000 25%,rgba(0,0,0,.04) 25%,rgba(0,0,0,.04) 50%,#0000 50%,#0000 75%,rgba(0,0,0,.04) 75%);
+  background-size:16px 16px; background-color:var(--surface-2);
+  display:flex; align-items:center; justify-content:center; padding:10px;
+}
+.hist-thumb img{ max-width:100%; max-height:100%; object-fit:contain; }
+.hist-meta{ padding:12px 14px; display:flex; align-items:center; justify-content:space-between; }
+.hist-date{ font-size:11.5px; color:var(--mist); }
+.hist-actions{ display:flex; gap:6px; }
+.hist-actions button{
+  width:30px; height:30px; border-radius:8px; border:1px solid var(--border); background:transparent;
+  display:grid; place-items:center; cursor:pointer; color:var(--ink-soft);
+}
+.hist-actions button:hover{ color:var(--indigo); border-color:var(--indigo); }
+.hist-actions button svg{ width:14px; height:14px; }
+
+.empty-state{
+  border:1.5px dashed var(--border); border-radius:var(--radius-lg); padding:52px 20px; text-align:center; color:var(--mist);
+}
+.empty-state svg{ width:38px; height:38px; margin:0 auto 12px; opacity:.5; }
+.empty-state p{ margin:0; font-size:14.5px; }
+
+/* =================================================================
+   7. FOOTER
+   ================================================================= */
+footer.site{ border-top:1px solid var(--border-soft); padding:36px 0; margin-top:20px; }
+.footer-row{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; }
+.footer-row .brand-word{ font-size:22px; }
+.footer-note{ font-size:12.5px; color:var(--mist); max-width:40ch; }
+.footer-links{ display:flex; gap:20px; font-size:13px; color:var(--mist); }
+.footer-links a{ text-decoration:none; }
+.footer-links a:hover{ color:var(--indigo); }
+
+/* =================================================================
+   FOOTER STYLES
+   ================================================================= */
+footer.site {
+  border-top: 1px solid var(--border-soft);
+  padding: 36px 0;
+  margin-top: 20px;
+}
+
+.footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.footer-row .brand-word {
+  font-size: 22px;
+}
+
+.footer-note {
+  font-size: 12.5px;
+  color: var(--mist);
+  max-width: 40ch;
+  margin: 4px 0 0;
+}
+
+.footer-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-social {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.social-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: var(--mist);
+  background: var(--surface);
+  transition: all 0.3s ease;
+  border: 1px solid var(--border);
+  text-decoration: none;
+}
+
+[data-theme="dark"] .social-link {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+.social-link:hover {
+  color: var(--indigo);
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+  border-color: var(--indigo);
+}
+
+[data-theme="dark"] .social-link:hover {
+  color: #8B87FF;
+  border-color: #8B87FF;
+  box-shadow: 0 4px 12px rgba(139, 135, 255, 0.25);
+}
+
+.social-link svg {
+  width: 18px;
+  height: 18px;
+}
+
+.footer-developer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--mist);
+}
+
+.footer-developer strong {
+  color: var(--indigo);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .footer-developer strong {
+  color: #8B87FF;
+}
+
+.footer-links {
+  display: flex;
+  gap: 20px;
+  font-size: 13px;
+  color: var(--mist);
+  align-items: center;
+}
+
+.footer-links a {
+  text-decoration: none;
+  color: var(--mist);
+  transition: color 0.2s ease;
+}
+
+.footer-links a:hover {
+  color: var(--indigo);
+}
+
+[data-theme="dark"] .footer-links a:hover {
+  color: #8B87FF;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .footer-row {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+  }
+  
+  .footer-note {
+    max-width: 100%;
+    text-align: center;
+  }
+  
+  .footer-center {
+    width: 100%;
+  }
+  
+  .footer-links {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer-social {
+    gap: 8px;
+  }
+  
+  .social-link {
+    width: 34px;
+    height: 34px;
+  }
+  
+  .social-link svg {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .footer-links {
+    gap: 12px;
+    font-size: 12px;
+  }
+}
+/* =================================================================
+   8. MODALS
+   ================================================================= */
+.modal-veil{
+  position:fixed; inset:0; background:rgba(10,12,24,.46); backdrop-filter:blur(3px);
+  display:flex; align-items:center; justify-content:center; z-index:100;
+  opacity:0; pointer-events:none; transition:opacity .25s var(--ease);
+  padding:20px;
+}
+.modal-veil.open{ opacity:1; pointer-events:auto; }
+.modal{
+  background:var(--surface); border-radius:var(--radius-lg); border:1px solid var(--border);
+  box-shadow:var(--shadow-lg); width:100%; max-width:420px; padding:28px;
+  transform:translateY(14px) scale(.97); opacity:0; transition:.3s var(--ease);
+}
+.modal-veil.open .modal{ transform:translateY(0) scale(1); opacity:1; }
+.modal h3{ font-family:var(--font-display); font-size:22px; font-weight:500; margin:0 0 8px; }
+.modal p{ color:var(--ink-soft); font-size:14.5px; line-height:1.55; margin:0 0 22px; }
+.modal-actions{ display:flex; gap:10px; justify-content:flex-end; }
+
+.modal.modal-lg{ max-width:640px; }
+.preview-frame{
+  border-radius:14px; overflow:hidden; border:1px solid var(--border);
+  background-image:
+    linear-gradient(45deg,#0000 25%,rgba(0,0,0,.04) 25%,rgba(0,0,0,.04) 50%,#0000 50%,#0000 75%,rgba(0,0,0,.04) 75%);
+  background-size:18px 18px; background-color:var(--surface-2);
+  display:flex; align-items:center; justify-content:center; min-height:220px; margin-bottom:22px;
+}
+.preview-frame img{ max-width:100%; max-height:320px; }
+
+/* =================================================================
+   9. TOASTS
+   ================================================================= */
+.toast-stack{
+  position:fixed; bottom:24px; right:24px; z-index:200;
+  display:flex; flex-direction:column; gap:10px; align-items:flex-end;
+}
+@media (max-width:560px){ .toast-stack{ right:14px; left:14px; align-items:stretch; } }
+.toast{
+  display:flex; align-items:center; gap:10px;
+  background:var(--ink); color:var(--paper);
+  padding:14px 18px; border-radius:14px; box-shadow:var(--shadow-lg);
+  font-size:14px; font-weight:500;
+  transform:translateY(10px); opacity:0; animation: toast-in .35s var(--ease) forwards;
+  max-width:340px;
+}
+[data-theme="dark"] .toast{ background:var(--surface); border:1px solid var(--border); color:var(--ink); }
+.toast svg{ width:18px; height:18px; flex:none; color:#4ADE80; }
+.toast.leaving{ animation: toast-out .3s var(--ease) forwards; }
+@keyframes toast-in{ to{ transform:translateY(0); opacity:1; } }
+@keyframes toast-out{ to{ transform:translateY(8px); opacity:0; } }
+
+/* loading spinner for export */
+.spinner{
+  width:16px; height:16px; border-radius:50%;
+  border:2px solid rgba(255,255,255,.4); border-top-color:#fff;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
+/* reveal-on-scroll */
+.reveal{ opacity:0; transform:translateY(18px); transition:opacity .7s var(--ease), transform .7s var(--ease); }
+.reveal.in{ opacity:1; transform:translateY(0); }
+
+::selection{ background:var(--indigo); color:#fff; }
+</style>
+</head>
+<body>
+
+<!-- =================================================================
+     HEADER
+     ================================================================= -->
+<header class="site">
+  <div class="wrap site-row">
+    <a href="#top" class="brand">
+      <svg class="brand-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 20.5c3-1.4 4.8-3 5.6-4.2L16.8 8a2 2 0 0 1 2.9 2.9l-8.2 8.2c-1.2.8-2.8 1.9-5.5 1.4z"/>
+        <path d="M15.5 6.2 17.8 4a1.4 1.4 0 0 1 2 2l-2.2 2.3"/>
+      </svg>
+      <span class="brand-word">Penned</span>
+    </a>
+    <nav class="site-nav">
+      <a class="nav-link" href="#studio">Studio</a>
+      <a class="nav-link" href="#history">History</a>
+      <button class="icon-btn" id="themeToggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+      <a href="#studio" class="btn btn-primary btn-sm">Start signing</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ===============================================================
+       HERO
+       =============================================================== -->
+  <section class="hero wrap">
+    <span class="eyebrow">Digital signatures, drawn by hand</span>
+    <h1>Create your <em>digital</em> signature.</h1>
+    <svg class="hero-flourish" viewBox="0 0 420 60" fill="none">
+      <path d="M8 40 C 60 8, 100 55, 150 30 S 230 8, 270 34 S 340 10, 412 26" />
+    </svg>
+    <p class="lead">Draw, customize, and download your signature instantly &mdash; with your mouse, finger, or stylus. Nothing you draw ever leaves this browser.</p>
+    <div class="hero-cta">
+      <a href="#studio" class="btn btn-primary">Open the signing studio</a>
+      <a href="#history" class="btn btn-ghost">View saved signatures</a>
+    </div>
+    <p class="hero-trust">Free to use &middot; No account required &middot; Exports at print resolution</p>
+  </section>
+
+  <!-- ===============================================================
+       STUDIO
+       =============================================================== -->
+  <section id="studio">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">The studio</span>
+        <h2>Your signing surface</h2>
+        <p>Sign naturally above the line. Adjust ink, weight, and style on the right, then save or export when it feels right.</p>
+      </div>
+
+      <div class="studio-grid reveal">
+        <!-- ---------- CANVAS CARD ---------- -->
+        <div class="paper-card">
+          <div class="paper-card-head">
+            <span class="label">Signature canvas</span>
+            <span class="stamp-pill" id="stampPill">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.3 2.3L16 10"/></svg>
+              Stamp mode
+            </span>
+          </div>
+
+          <div class="canvas-shell" id="canvasShell">
+            <canvas id="sigCanvas" aria-label="Signature drawing area. Draw your signature using mouse, touch, or stylus."></canvas>
+            <div class="baseline" aria-hidden="true"></div>
+            <div class="canvas-placeholder" id="placeholder"><span>Sign above the line&hellip;</span></div>
+            <div class="stamp-overlay" id="stampOverlay">
+              <span class="stamp-text" id="stampText">Digitally Signed</span>
+            </div>
+          </div>
+
+          <!-- floating glass toolbar -->
+          <div class="toolbar">
+            <button class="tool-btn" id="btnUndo" title="Undo (Ctrl+Z)" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+            </button>
+            <button class="tool-btn" id="btnRedo" title="Redo" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg>
+            </button>
+            <div class="toolbar-sep"></div>
+            <button class="tool-btn" id="btnClear" title="Clear canvas">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg>
+            </button>
+            <div class="toolbar-spacer"></div>
+            <span class="hint">Ctrl/&#8984;+Z undo &middot; Ctrl/&#8984;+S save</span>
+            <button class="btn btn-primary btn-sm" id="btnSave">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>
+              Save signature
+            </button>
+          </div>
+        </div>
+
+        <!-- ---------- CONTROL PANEL ---------- -->
+        <div class="panel">
+
+          <div class="panel-group">
+            <div class="g-label">Ink color</div>
+            <div class="swatches" id="swatches">
+              <button class="swatch active" data-color="#14213D" style="background:#14213D" title="Black ink" aria-label="Black ink"></button>
+              <button class="swatch" data-color="#1D4ED8" style="background:#1D4ED8" title="Blue ink" aria-label="Blue ink"></button>
+              <button class="swatch" data-color="#B8860B" style="background:#B8860B" title="Gold ink" aria-label="Gold ink"></button>
+              <label class="swatch swatch-custom" title="Custom color">
+                <input type="color" id="customColor" value="#14213D" aria-label="Custom ink color" />
+              </label>
+            </div>
+          </div>
+
+          <div class="panel-group">
+            <div class="g-label">Pen style</div>
+            <div class="segmented" id="penStyle">
+              <button class="active" data-effect="fountain">Fountain</button>
+              <button data-effect="ballpoint">Ballpoint</button>
+              <button data-effect="marker">Marker</button>
+            </div>
+          </div>
+
+          <div class="panel-group">
+            <div class="g-label">Line weight <span class="val" id="weightVal">Medium</span></div>
+            <input type="range" id="weightSlider" min="1" max="9" value="4" step="1" style="--pct:37%" />
+            <div class="scale-labels"><span>Thin</span><span>Thick</span></div>
+          </div>
+
+          <div class="panel-divider"></div>
+
+          <div class="panel-group">
+            <div class="toggle-row">
+              <div>
+                <div class="cap">Stamp mode</div>
+                <div class="sub">Adds a signed seal &amp; date to exports</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="stampToggle" />
+                <span class="slider-pill"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div>
+                <div class="cap">Transparent background</div>
+                <div class="sub">Export ink only, no paper</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="transparentToggle" checked />
+                <span class="slider-pill"></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="panel-divider"></div>
+
+          <div class="panel-group">
+            <div class="g-label">Export resolution</div>
+            <div class="select-wrap">
+              <select id="resSelect">
+                <option value="1">Standard &mdash; 1&times;</option>
+                <option value="2" selected>High &mdash; 2&times;</option>
+                <option value="4">Ultra &mdash; 4&times; (print)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="export-row">
+            <button class="btn btn-ghost" id="btnPreview">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+              Preview
+            </button>
+            <button class="btn btn-soft" id="btnCopy">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy
+            </button>
+          </div>
+          <button class="btn btn-primary" id="btnDownload" style="justify-content:center;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+            Download PNG
+          </button>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===============================================================
+       HISTORY GALLERY
+       =============================================================== -->
+  <section id="history">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="eyebrow">Saved locally</span>
+        <h2>Signature history</h2>
+        <p>Signatures you save are stored securely in this browser&rsquo;s local storage &mdash; they&rsquo;re never uploaded anywhere.</p>
+      </div>
+      <div id="historyGrid" class="history-grid reveal"></div>
+      <div id="historyEmpty" class="empty-state reveal" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20.5c3-1.4 4.8-3 5.6-4.2L16.8 8a2 2 0 0 1 2.9 2.9l-8.2 8.2c-1.2.8-2.8 1.9-5.5 1.4z"/></svg>
+        <p>No signatures yet &mdash; sign above and hit Save to see it here.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- =================================================================
+     FOOTER
+     ================================================================= -->
+<footer class="site">
+  <div class="wrap footer-row">
+    <div>
+      <span class="brand-word">Penned</span>
+      <p class="footer-note">Built with the HTML5 Canvas API. Every stroke is rendered locally &mdash; your signature never leaves this browser.</p>
+    </div>
+    
+    <div class="footer-center">
+      <div class="footer-social">
+        <a href="https://github.com/ypengly" class="social-link" aria-label="GitHub" title="GitHub" target="_blank" rel="noopener noreferrer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.15 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.62.24 2.85.12 3.15.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        </a>
+        <a href="https://www.linkedin.com/in/y-pengly-276720423/" class="social-link" aria-label="LinkedIn" title="LinkedIn" target="_blank" rel="noopener noreferrer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+        </a>
+        <a href="https://t.me/Pengly_27" class="social-link" aria-label="Telegram" title="Telegram" target="_blank" rel="noopener noreferrer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+          </svg>
+        </a>
+        <a href="https://youtube.com/@ypengly?si=EjQ8DmNYLQbWCOTy" class="social-link" aria-label="YouTube" title="YouTube" target="_blank" rel="noopener noreferrer">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        </a>
+      </div>
+      <div class="footer-developer">
+        <span>Developed by</span>
+        <strong>Y Pengly</strong>
+      </div>
+    </div>
+    
+    <div class="footer-links">
+      <a href="#studio">Studio</a>
+      <a href="#history">History</a>
+      <span>&copy; 2026 Penned</span>
+    </div>
+  </div>
+</footer>
+
+<!-- =================================================================
+     CLEAR CONFIRMATION MODAL
+     ================================================================= -->
+<div class="modal-veil" id="clearVeil">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="clearTitle">
+    <h3 id="clearTitle">Clear this signature?</h3>
+    <p>This wipes the canvas completely. Anything not saved will be lost once you start drawing again.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="clearCancel">Cancel</button>
+      <button class="btn btn-primary" id="clearConfirm">Clear canvas</button>
+    </div>
+  </div>
+</div>
+
+<!-- =================================================================
+     PREVIEW MODAL
+     ================================================================= -->
+<div class="modal-veil" id="previewVeil">
+  <div class="modal modal-lg" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+    <h3 id="previewTitle">Preview export</h3>
+    <p>This is exactly what will be downloaded.</p>
+    <div class="preview-frame"><img id="previewImg" alt="Signature export preview" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="previewClose">Close</button>
+      <button class="btn btn-primary" id="previewDownload">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        Download PNG
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- toast container -->
+<div class="toast-stack" id="toastStack"></div>
+
+<script>
+/* ===================================================================
+   PENNED — Digital Signature Studio
+   Vanilla JS, no external drawing library. Everything below is
+   organized into small focused modules for readability:
+     1. Theme
+     2. Toast notifications
+     3. Signature drawing engine (SignaturePad class)
+     4. Studio UI wiring (color / weight / style / stamp controls)
+     5. Export system (download / copy / preview)
+     6. Local storage history gallery
+     7. Modals + keyboard shortcuts + scroll reveal
+   =================================================================== */
+
+/* -------------------------------------------------------------------
+   1. THEME (light / dark)
+   ------------------------------------------------------------------- */
+const root = document.documentElement;
+const themeToggle = document.getElementById('themeToggle');
+const themeIcon = document.getElementById('themeIcon');
+const MOON = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'; // sun
+const SUN = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>'; // moon
+
+function applyTheme(t){
+  root.setAttribute('data-theme', t);
+  themeIcon.innerHTML = t === 'dark' ? SUN : MOON;
+  localStorage.setItem('penned-theme', t);
+}
+applyTheme(localStorage.getItem('penned-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+themeToggle.addEventListener('click', () => {
+  applyTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+});
+
+/* -------------------------------------------------------------------
+   2. TOAST NOTIFICATIONS
+   ------------------------------------------------------------------- */
+const toastStack = document.getElementById('toastStack');
+function showToast(message, opts = {}){
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>${message}</span>`;
+  toastStack.appendChild(el);
+  const life = opts.life || 3000;
+  setTimeout(() => {
+    el.classList.add('leaving');
+    setTimeout(() => el.remove(), 300);
+  }, life);
+}
+
+/* -------------------------------------------------------------------
+   3. SIGNATURE DRAWING ENGINE
+   ------------------------------------------------------------------
+   Strokes are stored as an array of points normalized to [0,1] of
+   the canvas's *logical* width/height at the moment they were drawn,
+   plus a per-point rendered width in px (already includes pressure +
+   velocity + the reference canvas width used to draw it). This lets
+   us redraw crisply after a resize by rescaling width proportionally.
+   ------------------------------------------------------------------- */
+class SignaturePad{
+  constructor(canvas, placeholderEl){
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.placeholderEl = placeholderEl;
+
+    this.strokes = [];     // committed strokes
+    this.redoStack = [];   // undone strokes, available for redo
+    this.current = null;   // in-progress stroke
+    this.rawPoints = [];   // raw pointer samples for the current stroke
+
+    this.color = '#14213D';
+    this.effect = 'fountain';   // fountain | ballpoint | marker
+    this.baseWidth = 3.2;       // px, controlled by weight slider
+
+    this._bind();
+    this.resize();
+  }
+
+  /* ---- public style setters ---- */
+  setColor(c){ this.color = c; }
+  setEffect(e){ this.effect = e; }
+  setBaseWidth(w){ this.baseWidth = w; }
+
+  isEmpty(){ return this.strokes.length === 0; }
+
+  /* ---- sizing ---- */
+  resize(){
+    const dpr = Math.max(window.devicePixelRatio || 1, 1);
+    const rect = this.canvas.getBoundingClientRect();
+    this.logicalWidth = rect.width;
+    this.logicalHeight = rect.height;
+    this.canvas.width = Math.round(rect.width * dpr);
+    this.canvas.height = Math.round(rect.height * dpr);
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this._redrawAll();
+  }
+
+  /* ---- event binding ---- */
+  _bind(){
+    const c = this.canvas;
+    c.addEventListener('pointerdown', this._onDown.bind(this));
+    window.addEventListener('pointermove', this._onMove.bind(this));
+    window.addEventListener('pointerup', this._onUp.bind(this));
+    window.addEventListener('pointercancel', this._onUp.bind(this));
+  }
+
+  _pos(e){
+    const rect = this.canvas.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left) / rect.width,   // normalized 0..1
+      y: (e.clientY - rect.top) / rect.height,   // normalized 0..1
+      p: (e.pressure && e.pressure > 0) ? e.pressure : 0.5,
+      t: performance.now()
+    };
+  }
+
+  _onDown(e){
+    if (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse') return;
+    this.canvas.setPointerCapture(e.pointerId);
+    this._drawing = true;
+    this.redoStack = []; // new action invalidates redo history
+    this.rawPoints = [this._pos(e)];
+    this.current = { color:this.color, effect:this.effect, base:this.baseWidth, refWidth:this.logicalWidth, points:[] };
+    this._togglePlaceholder(true);
+  }
+
+  _onMove(e){
+    if (!this._drawing) return;
+    const pt = this._pos(e);
+    const last = this.rawPoints[this.rawPoints.length - 1];
+    // throttle by distance to avoid pathological point density
+    const dx = (pt.x - last.x) * this.logicalWidth, dy = (pt.y - last.y) * this.logicalHeight;
+    if (Math.hypot(dx, dy) < 0.6) return;
+    this.rawPoints.push(pt);
+    this._appendSmoothedSegment();
+  }
+
+  _onUp(){
+    if (!this._drawing) return;
+    this._drawing = false;
+    if (this.current && this.current.points.length > 1){
+      this.strokes.push(this.current);
+    }
+    this.current = null;
+    this.rawPoints = [];
+    this._syncUndoRedoButtons();
+  }
+
+  /* ---- effect parameters ---- */
+  _effectParams(effect){
+    switch(effect){
+      case 'ballpoint': return { widthVar:0.15, opacity:1,   minMul:0.9,  maxMul:1.1  };
+      case 'marker':    return { widthVar:0.35, opacity:0.85,minMul:1.5,  maxMul:2.1  };
+      case 'fountain':
+      default:          return { widthVar:0.6,  opacity:0.94,minMul:0.55, maxMul:1.65 };
+    }
+  }
+
+  /* ---- core smoothing + variable-width rendering ---- */
+  _appendSmoothedSegment(){
+    const pts = this.rawPoints;
+    const n = pts.length;
+    if (n < 3) return;
+
+    const p0 = pts[n - 3], p1 = pts[n - 2], p2 = pts[n - 1];
+    const toPx = (p) => ({ x: p.x * this.logicalWidth, y: p.y * this.logicalHeight });
+    const a = toPx(p0), b = toPx(p1), c = toPx(p2);
+    const mid1 = { x:(a.x + b.x)/2, y:(a.y + b.y)/2 };
+    const mid2 = { x:(b.x + c.x)/2, y:(b.y + c.y)/2 };
+
+    const dt = Math.max(p2.t - p1.t, 1);
+    const dist = Math.hypot(c.x - b.x, c.y - b.y);
+    const velocity = dist / dt; // px/ms
+
+    const params = this._effectParams(this.current.effect);
+    // faster strokes -> thinner line; pressure boosts width when available
+    const speedFactor = Math.max(0, 1 - Math.min(velocity * 2.2, 1)) ;
+    const pressureFactor = 0.6 + (p2.p * 0.8);
+    let widthMul = params.minMul + (params.maxMul - params.minMul) * speedFactor;
+    widthMul *= pressureFactor;
+
+    const width = this.current.base * widthMul;
+
+    const seg = { mid1, control:b, mid2, width, color:this.current.color, effect:this.current.effect, opacity:params.opacity };
+    this.current.points.push(seg);
+    this._drawSegment(seg, 1);
+  }
+
+  _drawSegment(seg, scale){
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = seg.color;
+    ctx.globalAlpha = seg.opacity;
+    ctx.lineWidth = Math.max(seg.width * scale, 0.6);
+    ctx.beginPath();
+    ctx.moveTo(seg.mid1.x * scale, seg.mid1.y * scale);
+    ctx.quadraticCurveTo(seg.control.x * scale, seg.control.y * scale, seg.mid2.x * scale, seg.mid2.y * scale);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* ---- redraw everything (used after resize / undo / redo / clear) ---- */
+  _redrawAll(){
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, this.logicalWidth, this.logicalHeight);
+    for (const stroke of this.strokes){
+      const scale = stroke.refWidth ? (this.logicalWidth / stroke.refWidth) : 1;
+      for (const seg of stroke.points){
+        this._drawSegment(seg, scale);
+      }
+    }
+    this._togglePlaceholder(!this.isEmpty());
+  }
+
+  _togglePlaceholder(hasContentOrDrawing){
+    this.placeholderEl.classList.toggle('hidden', hasContentOrDrawing);
+  }
+
+  /* ---- history controls ---- */
+  undo(){
+    if (!this.strokes.length) return;
+    this.redoStack.push(this.strokes.pop());
+    this._redrawAll();
+    this._syncUndoRedoButtons();
+  }
+  redo(){
+    if (!this.redoStack.length) return;
+    this.strokes.push(this.redoStack.pop());
+    this._redrawAll();
+    this._syncUndoRedoButtons();
+  }
+  clear(){
+    this.strokes = [];
+    this.redoStack = [];
+    this._redrawAll();
+    this._syncUndoRedoButtons();
+  }
+  _syncUndoRedoButtons(){
+    document.getElementById('btnUndo').disabled = this.strokes.length === 0;
+    document.getElementById('btnRedo').disabled = this.redoStack.length === 0;
+  }
+
+  /* ---- export: render strokes onto an offscreen canvas ----
+     opts: { scale, transparent, background, stamp } */
+  renderExportCanvas(opts){
+    const scale = opts.scale || 1;
+    const out = document.createElement('canvas');
+    out.width = this.logicalWidth * scale;
+    out.height = this.logicalHeight * scale;
+    const octx = out.getContext('2d');
+
+    if (!opts.transparent){
+      octx.fillStyle = opts.background || '#FFFFFF';
+      octx.fillRect(0, 0, out.width, out.height);
+    }
+
+    // temporarily point drawing calls at the export context
+    const originalCtx = this.ctx;
+    this.ctx = octx;
+    for (const stroke of this.strokes){
+      const strokeScale = (stroke.refWidth ? (this.logicalWidth / stroke.refWidth) : 1) * scale;
+      for (const seg of stroke.points){
+        this._drawSegment(seg, strokeScale);
+      }
+    }
+    this.ctx = originalCtx;
+
+    if (opts.stamp){
+      this._drawStamp(octx, out.width, out.height);
+    }
+    return out;
+  }
+
+  _drawStamp(ctx, w, h){
+    const pad = w * 0.02;
+    ctx.save();
+    ctx.strokeStyle = '#B8860B';
+    ctx.lineWidth = Math.max(w * 0.0022, 1.5);
+    ctx.beginPath();
+    const r = Math.min(w, h) * 0.03;
+    roundRectPath(ctx, pad, pad, w - pad*2, h - pad*2, r);
+    ctx.stroke();
+
+    const dateStr = new Date().toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+    ctx.fillStyle = '#B8860B';
+    ctx.font = `${Math.max(w * 0.018, 11)}px Inter, sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(`DIGITALLY SIGNED · ${dateStr}`.toUpperCase(), w - pad*2, h - pad*1.4);
+    ctx.restore();
+  }
+}
+
+function roundRectPath(ctx, x, y, w, h, r){
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y,   x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x,   y+h, r);
+  ctx.arcTo(x,   y+h, x,   y,   r);
+  ctx.arcTo(x,   y,   x+w, y,   r);
+  ctx.closePath();
+}
+
+/* -------------------------------------------------------------------
+   4. STUDIO UI WIRING
+   ------------------------------------------------------------------- */
+const canvasEl = document.getElementById('sigCanvas');
+const placeholderEl = document.getElementById('placeholder');
+const pad = new SignaturePad(canvasEl, placeholderEl);
+
+// keep canvas crisp across resizes (debounced)
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => pad.resize(), 120);
+});
+
+// --- color swatches ---
+const swatchesWrap = document.getElementById('swatches');
+const customColorInput = document.getElementById('customColor');
+swatchesWrap.querySelectorAll('.swatch[data-color]').forEach(sw => {
+  sw.addEventListener('click', () => {
+    swatchesWrap.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+    sw.classList.add('active');
+    pad.setColor(sw.dataset.color);
+  });
+});
+customColorInput.addEventListener('input', (e) => {
+  swatchesWrap.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+  customColorInput.closest('.swatch').classList.add('active');
+  customColorInput.closest('.swatch').style.background = e.target.value;
+  pad.setColor(e.target.value);
+});
+
+// --- pen style segmented control ---
+const penStyleWrap = document.getElementById('penStyle');
+penStyleWrap.querySelectorAll('button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    penStyleWrap.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    pad.setEffect(btn.dataset.effect);
+  });
+});
+
+// --- weight slider ---
+const weightSlider = document.getElementById('weightSlider');
+const weightVal = document.getElementById('weightVal');
+const WEIGHT_LABELS = {1:'Thin',2:'Thin',3:'Thin',4:'Medium',5:'Medium',6:'Medium',7:'Thick',8:'Thick',9:'Thick'};
+function syncWeight(){
+  const v = Number(weightSlider.value);
+  const px = 1.4 + v * 0.85; // maps 1..9 -> ~2.2..9px base
+  pad.setBaseWidth(px);
+  weightVal.textContent = WEIGHT_LABELS[v];
+  const pct = ((v - 1) / 8) * 100;
+  weightSlider.style.setProperty('--pct', pct + '%');
+}
+weightSlider.addEventListener('input', syncWeight);
+syncWeight();
+
+// --- stamp mode ---
+const stampToggle = document.getElementById('stampToggle');
+const stampOverlay = document.getElementById('stampOverlay');
+const stampPill = document.getElementById('stampPill');
+const stampText = document.getElementById('stampText');
+function syncStampVisual(){
+  const on = stampToggle.checked;
+  stampOverlay.classList.toggle('active', on);
+  stampPill.classList.toggle('active', on);
+  stampText.textContent = 'Digitally Signed · ' + new Date().toLocaleDateString(undefined,{month:'short',day:'numeric'});
+}
+stampToggle.addEventListener('change', syncStampVisual);
+syncStampVisual();
+
+/* -------------------------------------------------------------------
+   5. EXPORT SYSTEM
+   ------------------------------------------------------------------- */
+const transparentToggle = document.getElementById('transparentToggle');
+const resSelect = document.getElementById('resSelect');
+
+function buildExport(){
+  return pad.renderExportCanvas({
+    scale: Number(resSelect.value),
+    transparent: transparentToggle.checked,
+    background: '#FFFFFF',
+    stamp: stampToggle.checked
+  });
+}
+
+function guardEmpty(){
+  if (pad.isEmpty()){
+    showToast('Draw a signature first — the canvas is empty.');
+    return true;
+  }
+  return false;
+}
+
+function downloadCanvas(canvas, filename){
+  canvas.toBlob((blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, 'image/png');
+}
+
+document.getElementById('btnDownload').addEventListener('click', async (e) => {
+  if (guardEmpty()) return;
+  const btn = e.currentTarget;
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Exporting…';
+  await new Promise(r => setTimeout(r, 450)); // brief, honest loading beat
+  const out = buildExport();
+  downloadCanvas(out, `signature-${Date.now()}.png`);
+  btn.disabled = false;
+  btn.innerHTML = original;
+  showToast('Signature downloaded.');
+});
+
+document.getElementById('btnCopy').addEventListener('click', async () => {
+  if (guardEmpty()) return;
+  const out = buildExport();
+  try{
+    out.toBlob(async (blob) => {
+      await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]);
+      showToast('Copied to clipboard.');
+    }, 'image/png');
+  }catch(err){
+    showToast('Clipboard copy isn\u2019t supported in this browser.');
+  }
+});
+
+const previewVeil = document.getElementById('previewVeil');
+const previewImg = document.getElementById('previewImg');
+document.getElementById('btnPreview').addEventListener('click', () => {
+  if (guardEmpty()) return;
+  const out = buildExport();
+  previewImg.src = out.toDataURL('image/png');
+  previewVeil.classList.add('open');
+});
+document.getElementById('previewClose').addEventListener('click', () => previewVeil.classList.remove('open'));
+document.getElementById('previewDownload').addEventListener('click', () => {
+  const out = buildExport();
+  downloadCanvas(out, `signature-${Date.now()}.png`);
+  showToast('Signature downloaded.');
+});
+previewVeil.addEventListener('click', (e) => { if (e.target === previewVeil) previewVeil.classList.remove('open'); });
+
+/* -------------------------------------------------------------------
+   6. LOCAL STORAGE HISTORY GALLERY
+   ------------------------------------------------------------------- */
+const HIST_KEY = 'penned-signature-history';
+const historyGrid = document.getElementById('historyGrid');
+const historyEmpty = document.getElementById('historyEmpty');
+
+function loadHistory(){
+  try{ return JSON.parse(localStorage.getItem(HIST_KEY)) || []; }
+  catch{ return []; }
+}
+function saveHistory(list){
+  localStorage.setItem(HIST_KEY, JSON.stringify(list.slice(0, 24)));
+}
+function renderHistory(){
+  const list = loadHistory();
+  historyGrid.style.display = list.length ? 'grid' : 'none';
+  historyEmpty.style.display = list.length ? 'none' : 'block';
+  historyGrid.innerHTML = '';
+  list.forEach((item) => {
+    const card = document.createElement('div');
+    card.className = 'hist-card';
+    const date = new Date(item.date);
+    card.innerHTML = `
+      <div class="hist-thumb"><img src="${item.data}" alt="Saved signature from ${date.toLocaleString()}" /></div>
+      <div class="hist-meta">
+        <span class="hist-date">${date.toLocaleDateString(undefined,{month:'short',day:'numeric'})}</span>
+        <div class="hist-actions">
+          <button class="dl" title="Download" aria-label="Download signature">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+          </button>
+          <button class="rm" title="Delete" aria-label="Delete signature">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/></svg>
+          </button>
+        </div>
+      </div>`;
+    card.querySelector('.dl').addEventListener('click', () => {
+      const a = document.createElement('a');
+      a.href = item.data; a.download = `signature-${item.id}.png`;
+      document.body.appendChild(a); a.click(); a.remove();
+    });
+    card.querySelector('.rm').addEventListener('click', () => {
+      const next = loadHistory().filter(x => x.id !== item.id);
+      saveHistory(next);
+      renderHistory();
+      showToast('Signature removed.');
+    });
+    historyGrid.appendChild(card);
+  });
+}
+
+function saveCurrentSignature(){
+  if (guardEmpty()) return;
+  const out = pad.renderExportCanvas({ scale: 2, transparent: true, stamp: stampToggle.checked });
+  const entry = { id: Date.now().toString(36), date: Date.now(), data: out.toDataURL('image/png') };
+  const list = loadHistory();
+  list.unshift(entry);
+  saveHistory(list);
+  renderHistory();
+  showToast('Signature saved successfully!');
+}
+document.getElementById('btnSave').addEventListener('click', saveCurrentSignature);
+renderHistory();
+
+/* -------------------------------------------------------------------
+   7. TOOLBAR ACTIONS, MODALS, KEYBOARD SHORTCUTS, SCROLL REVEAL
+   ------------------------------------------------------------------- */
+document.getElementById('btnUndo').addEventListener('click', () => pad.undo());
+document.getElementById('btnRedo').addEventListener('click', () => pad.redo());
+
+const clearVeil = document.getElementById('clearVeil');
+document.getElementById('btnClear').addEventListener('click', () => {
+  if (pad.isEmpty()) return;
+  clearVeil.classList.add('open');
+});
+document.getElementById('clearCancel').addEventListener('click', () => clearVeil.classList.remove('open'));
+document.getElementById('clearConfirm').addEventListener('click', () => {
+  pad.clear();
+  clearVeil.classList.remove('open');
+  showToast('Canvas cleared.');
+});
+clearVeil.addEventListener('click', (e) => { if (e.target === clearVeil) clearVeil.classList.remove('open'); });
+
+document.addEventListener('keydown', (e) => {
+  const mod = e.ctrlKey || e.metaKey;
+  if (!mod) return;
+  if (e.key.toLowerCase() === 'z'){ e.preventDefault(); pad.undo(); }
+  if (e.key.toLowerCase() === 's'){ e.preventDefault(); saveCurrentSignature(); }
+});
+
+// gentle scroll-reveal for section blocks
+const revealEls = document.querySelectorAll('.reveal');
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(en => { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
+}, { threshold: 0.12 });
+revealEls.forEach(el => io.observe(el));
+</script>
+</body>
+</html>
